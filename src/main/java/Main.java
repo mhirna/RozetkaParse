@@ -5,6 +5,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.*;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,7 +20,6 @@ public class Main {
             String pg = url + "page=" + Integer.toString(i) + "/";
             parse_category_page(pg);
         }
-        parse_reviews_page("https://rozetka.com.ua/ua/xiaomi_mi_power_bank_5000/p2000177/comments/page=71/");
     }
 
     private static void parse_category_page (String url) throws IOException{
@@ -34,6 +34,12 @@ public class Main {
     public static void parse_reviews (String url) throws IOException{
         Document doc = Jsoup.connect(url).get();
         Elements nums = doc.select("a.paginator-catalog-l-link");
+        URL new_url = new URL(url);
+        String[] link = new_url.getPath().split("/");
+        String title = link[2];
+        String filename = String.format("%s.csv", title);
+        FileWriter writer;
+        writer = new FileWriter(filename, true);
         int num = 0;
         if (nums.size() != 0){
             num = Integer.parseInt(nums.last().text());
@@ -41,8 +47,14 @@ public class Main {
         List<String> sentiments = new ArrayList<String>();
         for (int i=0; i < num; i++){
             String pg = url + "page=" + Integer.toString(i + 1) + "/";
-            sentiments.addAll(parse_reviews_page(pg));
+            List<String> sentiment = parse_reviews_page(pg);
+            sentiments.addAll(sentiment);
         }
+        for (int i=0; i<sentiments.size(); i++){
+            writer.write(sentiments.get(i));
+            writer.write("\n");
+        }
+
     }
 
     public static List<String> parse_reviews_page(String url)throws IOException{
@@ -51,12 +63,13 @@ public class Main {
         List<String> sentiments = new ArrayList<String>();
         for(Element review: reviews){
             String star = review.select("span.g-rating-stars-i").attr("content");
-            System.out.println(star);
             String text = review.select("div.pp-review-text-i").text();
-            System.out.println(text);
-            sentiments.add(star);
-            sentiments.add(text);
+            if (star!= ""){
+            sentiments.add(star + "," + text + "\n");
+            System.out.println(star + "," + text + "\n");
+
             }
+        }
 
         return sentiments;
         }
